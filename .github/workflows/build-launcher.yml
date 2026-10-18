@@ -56,7 +56,9 @@ jobs:
           git -C engine-src apply ../engine.patch
           curl -fL --retry 3 https://raw.githubusercontent.com/Awakenchan/BloodBorneButPc/v0.9.34-beta.4/engine/win_compat.h -o engine-src/gpu/win_compat.h
           cd engine-src
-          CFLAGS="-Wno-error=unused-but-set-global" CXXFLAGS="-include $PWD/gpu/win_compat.h" bash build.sh
+          WIN_COMPAT_HEADER="$(cygpath -w "$PWD/gpu/win_compat.h")"
+          test -s gpu/win_compat.h
+          CFLAGS="-Wno-error=unused-but-set-global" CXXFLAGS="-include $WIN_COMPAT_HEADER" bash build.sh
           test -s out/bb-probe.exe
           test -s out/bb-gpu-capabilities.exe
           ls -lah out
