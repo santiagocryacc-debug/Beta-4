@@ -74,11 +74,10 @@ jobs:
           Invoke-WebRequest -Uri 'https://github.com/Awakenchan/BloodBorneButPc/releases/download/v0.9.34-beta.4/BloodbornePC-v0.9.34-beta.4-win64.zip' -OutFile dist/official-base.zip
           Expand-Archive -LiteralPath dist/official-base.zip -DestinationPath dist/package -Force
           $rootPath = (Resolve-Path 'dist/package').Path
-          if (-not (Test-Path (Join-Path $rootPath 'out'))) {
-            $root = Get-ChildItem $rootPath -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'out') } | Select-Object -First 1
-            if (-not $root) { throw 'Could not find package root containing out/' }
-            $rootPath = $root.FullName
-          }
+          $topFiles = @(Get-ChildItem $rootPath -File)
+          $topDirs = @(Get-ChildItem $rootPath -Directory)
+          if ($topFiles.Count -eq 0 -and $topDirs.Count -eq 1) { $rootPath = $topDirs[0].FullName }
+          Get-ChildItem $rootPath | Select-Object Mode, Name
           "PACKAGE_ROOT=$rootPath" >> $env:GITHUB_ENV
 
       - name: Replace engine binaries with source-built Beta 4 engine
