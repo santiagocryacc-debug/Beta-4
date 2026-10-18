@@ -47,6 +47,7 @@ jobs:
             mingw-w64-clang-x86_64-ffmpeg
             mingw-w64-clang-x86_64-protobuf
             mingw-w64-clang-x86_64-nlohmann-json
+            mingw-w64-clang-x86_64-miniupnpc
 
       - name: Build Beta 4 engine from source
         shell: msys2 {0}
