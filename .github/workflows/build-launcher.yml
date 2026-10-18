@@ -1,11 +1,11 @@
-name: Build Beta 4 launcher
+name: Build Bloodborne PC Beta 4 (engine + launcher)
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - "launcher/windows/BloodborneLauncher/**"
-      - "launcher/windows/Shared/**"
+      - "engine/**"
+      - "launcher/windows/**"
       - ".github/workflows/build-launcher.yml"
 
 permissions:
@@ -15,21 +15,87 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout
+      - name: Checkout fork
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+      - name: Install MSYS2 CLANG64 toolchain
+        uses: msys2/setup-msys2@v2
         with:
-          dotnet-version: "8.0.x"
+          msystem: CLANG64
+          update: true
+          install: >-
+            git
+            mingw-w64-clang-x86_64-clang
+            mingw-w64-clang-x86_64-lld
+            mingw-w64-clang-x86_64-libc++
+            mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-ninja
+            mingw-w64-clang-x86_64-pkgconf
+            mingw-w64-clang-x86_64-python
+            mingw-w64-clang-x86_64-sdl3
+            mingw-w64-clang-x86_64-boost
+            mingw-w64-clang-x86_64-fmt
+            mingw-w64-clang-x86_64-glslang
+            mingw-w64-clang-x86_64-spirv-cross
+            mingw-w64-clang-x86_64-spirv-headers
+            mingw-w64-clang-x86_64-vulkan-headers
+            mingw-w64-clang-x86_64-vulkan-loader
+            mingw-w64-clang-x86_64-vulkan-memory-allocator
+            mingw-w64-clang-x86_64-xxhash
+            mingw-w64-clang-x86_64-zydis
+            mingw-w64-clang-x86_64-robin-map
+            mingw-w64-clang-x86_64-ffmpeg
 
-      - name: Publish launcher (Windows x64)
-        run: dotnet publish "launcher/windows/BloodborneLauncher/BloodborneLauncher.csproj" --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --output publish
+      - name: Build Beta 4 engine from source
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch v0.4.0-darkizuku-preview.1 --recurse-submodules https://github.com/DarkIzuku/bloodborne_pc.git engine-src
+          curl -fL --retry 3 https://raw.githubusercontent.com/Awakenchan/BloodBorneButPc/v0.9.34-beta.4/engine/bbhost-changes.patch -o engine.patch
+          test "$(wc -c < engine.patch | tr -d ' ')" = "8826222"
+          git -C engine-src apply ../engine.patch
+          curl -fL --retry 3 https://raw.githubusercontent.com/Awakenchan/BloodBorneButPc/v0.9.34-beta.4/engine/win_compat.h -o engine-src/gpu/win_compat.h
+          cd engine-src
+          CFLAGS="-Wno-error=unused-but-set-global" CXXFLAGS="-include $PWD/gpu/win_compat.h" bash build.sh
+          test -s out/bb-probe.exe
+          test -s out/bb-gpu-capabilities.exe
+          ls -lah out
 
-      - name: Upload launcher
+      - name: Download clean official Beta 4 package as runtime base
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force dist, dist/package | Out-Null
+          Invoke-WebRequest -Uri 'https://github.com/Awakenchan/BloodBorneButPc/releases/download/v0.9.34-beta.4/BloodbornePC-v0.9.34-beta.4-win64.zip' -OutFile dist/official-base.zip
+          Expand-Archive -LiteralPath dist/official-base.zip -DestinationPath dist/package -Force
+          $root = Get-ChildItem dist/package -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'out') } | Select-Object -First 1
+          if (-not $root) { throw 'Could not find package root containing out/' }
+          "PACKAGE_ROOT=$($root.FullName)" >> $env:GITHUB_ENV
+
+      - name: Replace engine binaries with source-built Beta 4 engine
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:PACKAGE_ROOT 'out'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Get-ChildItem engine-src/out -File | Copy-Item -Destination $out -Force
+          if (-not (Test-Path (Join-Path $out 'bb-probe.exe'))) { throw 'Source-built bb-probe.exe missing' }
+          Get-FileHash (Join-Path $out 'bb-probe.exe') -Algorithm SHA256 | Format-List
+
+      - name: Publish matching self-contained launcher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet publish launcher/windows/BloodborneLauncher/BloodborneLauncher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:Version=0.9.34-beta.4 --output launcher-publish
+          Copy-Item 'launcher-publish/Bloodborne Launcher.exe' (Join-Path $env:PACKAGE_ROOT 'Bloodborne Launcher.exe') -Force
+          if (Test-Path 'dist/BloodbornePC-v0.9.34-beta.4-win64-source-engine.zip') { Remove-Item 'dist/BloodbornePC-v0.9.34-beta.4-win64-source-engine.zip' -Force }
+          Compress-Archive -Path (Join-Path $env:PACKAGE_ROOT '*') -DestinationPath 'dist/BloodbornePC-v0.9.34-beta.4-win64-source-engine.zip' -CompressionLevel Optimal
+          Get-Item 'dist/BloodbornePC-v0.9.34-beta.4-win64-source-engine.zip' | Select-Object Name,Length
+
+      - name: Upload complete test package
         uses: actions/upload-artifact@v4
         with:
-          name: Bloodborne-Launcher-Beta-4-win-x64
-          path: publish/
+          name: Bloodborne-PC-Beta-4-source-engine-win-x64
+          path: dist/BloodbornePC-v0.9.34-beta.4-win64-source-engine.zip
           if-no-files-found: error
           retention-days: 7
