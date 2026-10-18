@@ -45,6 +45,7 @@ jobs:
             mingw-w64-clang-x86_64-zydis
             mingw-w64-clang-x86_64-robin-map
             mingw-w64-clang-x86_64-ffmpeg
+            mingw-w64-clang-x86_64-protobuf
 
       - name: Build Beta 4 engine from source
         shell: msys2 {0}
