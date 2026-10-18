@@ -1,0 +1,35 @@
+name: Build Beta 4 launcher
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "launcher/windows/BloodborneLauncher/**"
+      - "launcher/windows/Shared/**"
+      - ".github/workflows/build-launcher.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish launcher (Windows x64)
+        run: dotnet publish "launcher/windows/BloodborneLauncher/BloodborneLauncher.csproj" --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --output publish
+
+      - name: Upload launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bloodborne-Launcher-Beta-4-win-x64
+          path: publish/
+          if-no-files-found: error
+          retention-days: 7
