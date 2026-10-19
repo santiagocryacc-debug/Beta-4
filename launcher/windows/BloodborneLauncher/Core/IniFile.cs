@@ -81,7 +81,21 @@ namespace BloodborneLauncher.Core
                     output.Add($"{key}={value}");
 
             Directory.CreateDirectory(Path.GetDirectoryName(Paths.IniPath)!);
-            File.WriteAllText(Paths.IniPath, string.Join("\n", output) + "\n");
+            // Keep the last known-good config before changing it. The game and this launcher share
+            // bbport.ini, so an accidental UI change must be recoverable.
+            if (File.Exists(Paths.IniPath))
+            {
+                var backup = Paths.IniPath + ".bak";
+                try { File.Copy(Paths.IniPath, backup, overwrite: true); }
+                catch (IOException) { /* Continue only if the main file remains writable. */ }
+                catch (UnauthorizedAccessException) { /* File.WriteAllText below reports the actual save failure. */ }
+            }
+            var temp = Paths.IniPath + ".tmp";
+            File.WriteAllText(temp, string.Join("\n", output) + "\n");
+            if (File.Exists(Paths.IniPath))
+                File.Replace(temp, Paths.IniPath, null);
+            else
+                File.Move(temp, Paths.IniPath);
             _lines = output;
         }
 
