@@ -73,7 +73,7 @@
             new("effect_game_aa", "Game's own anti-aliasing", false),
             new("effect_dynamic_shadows", "Shadows from dynamic lights", true),
             new("effect_ssr", "Screen-space reflections", false, "Not in the original game"),
-            new("skip_intro", "Skip intro videos", false),
+            new("skip_intro", "Skip intro videos", true),
             new("debug_camera", "Free camera", false, "Toggle with Cross + L3 / Space + Z"),
             new("debug_menu", "Debug menu", false,
                 "Left touchpad / Tab. Needs the adhoc folder from Nexus mod #253 (adhoc/font) in the game's dvdroot_ps4 or as a mod; without it the patch is not applied"),
