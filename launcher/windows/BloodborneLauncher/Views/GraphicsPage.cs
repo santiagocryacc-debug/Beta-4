@@ -38,6 +38,15 @@ namespace BloodborneLauncher.Views
                 () => ParseDouble(Ini.Get("sharpness"), 0.5), v => Ini.Set("sharpness", Fmt(v)));
             _sharpnessCard = (SettingRow)Body.Children[^1];
 
+            Group("FSR temporal options");
+            IniToggle(SymbolRegular.Timer24, "Temporal jitter", "Controls the temporal jitter input used by the upscaler.", "jitter");
+            IniToggle(SymbolRegular.Lightbulb24, "Automatic exposure (FSR 4)", "Let FSR 4 estimate exposure automatically.", "fsr4_auto_exposure");
+            IniToggle(SymbolRegular.ArrowSwap24, "Invert jitter (FSR 4)", "Invert the jitter direction for FSR 4 if the image shows temporal artifacts.", "fsr4_invert_jitter");
+            IniToggle(SymbolRegular.Shapes24, "Reactive mask", "Use the reactive mask to help preserve effects such as particles and transparency during upscaling.", "reactive");
+            IniSlider(SymbolRegular.Gauge24, "Reactive scale", 0, 2, "reactive_scale", fallback: 1.0);
+            IniSlider(SymbolRegular.SlideSize24, "Reactive threshold", 0, 1, "reactive_threshold", fallback: 0.20);
+            IniSlider(SymbolRegular.SlideSize24, "Reactive maximum", 0, 1, "reactive_max", fallback: 0.90);
+
             IniToggle(SymbolRegular.ArrowMove24, "Object motion vectors", "Less ghosting on characters; costs about 10% FPS", "object_motion");
             IniToggle(SymbolRegular.DataUsage24, "Show FPS", null, "show_fps");
             // What the counter shows (on unless turned off).
