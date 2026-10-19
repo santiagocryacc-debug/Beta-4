@@ -24,11 +24,8 @@ namespace BloodborneLauncher.Views
             "1. Turn on Play online. 2. Enter your account below. 3. In the game, choose online at the title screen: " +
             "The Hunter's Dream's welcome message means you are online. Everyone needs game version 1.09.")
         {
-            // One server now: the bbbridge pool and custom servers are gone (scripts/online.py defaults).
-            foreach (var key in new[] { "online_host", "online_port", "online_webapi", "online_game_api", "online_thd_account" })
-                if (Ini.Get(key).Length > 0) Ini.Set(key, "");
-            // With a Hunter's Dream account: its own co-op (the engine's thd backend, with bbhost players).
-            Ini.Set("online_pool", S.HuntersDreamToken.Length > 0 && S.Str("hd_name").Length > 0 ? "huntersdream" : "");
+            // Do not rewrite server and pool keys just by opening this page. bbport.ini may contain
+            // custom-server settings that this UI does not expose; IniFile preserves those values.
 
             if (HuntersDream.OnlinePaused)
                 Body.Children.Add(Text("Online play is paused in this version. The game starts offline whatever is set here; " +
